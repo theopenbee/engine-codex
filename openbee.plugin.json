@@ -1,0 +1,16 @@
+{
+  "protocol_version": 1,
+  "type": "engine",
+  "id": "codex",
+  "name": { "en": "Codex", "zh": "Codex" },
+  "description": { "en": "Runs tasks with OpenAI Codex", "zh": "用 OpenAI Codex 执行任务" },
+  "command": ["node", "dist/index.js"],
+  "config": [
+    {
+      "key": "path",
+      "type": "string",
+      "label": { "en": "Codex path", "zh": "Codex 路径" },
+      "help": { "en": "Leave empty to use codex on PATH", "zh": "留空则使用 PATH 里的 codex" }
+    }
+  ]
+}

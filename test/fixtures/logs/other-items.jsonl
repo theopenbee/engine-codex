@@ -1,0 +1,5 @@
+{"type":"thread.started","thread_id":"abc"}
+{"type":"item.completed","item":{"type":"reasoning","text":"thinking out loud"}}
+{"type":"item.completed","item":{"type":"command_execution","text":"not a message","command":"ls"}}
+{"type":"item.started","item":{"type":"agent_message","text":"not completed yet"}}
+{"type":"turn.completed","usage":{}}

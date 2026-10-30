@@ -1,0 +1,46 @@
+{
+  "name": "@theopenbee/engine-codex",
+  "version": "0.1.0",
+  "description": "Codex engine plugin for openbee",
+  "keywords": [
+    "openbee",
+    "openbee-plugin",
+    "openbee-engine",
+    "codex",
+    "openai"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/theopenbee/engine-codex.git"
+  },
+  "homepage": "https://github.com/theopenbee/engine-codex#readme",
+  "bugs": {
+    "url": "https://github.com/theopenbee/engine-codex/issues"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "files": [
+    "dist",
+    "openbee.plugin.json"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test test/*.test.mjs",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "@theopenbee/engine-sdk": "file:../engine-sdk"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  }
+}

@@ -1,0 +1,4 @@
+{"type":"thread.started","thread_id":"abc"}
+{"type":"item.completed","item":{"type":"agent_message","text":"kept"}}
+{"type":"item.completed","item":{"type":"agent_message","text":""}}
+{"type":"item.completed","item":{"type":"agent_message"}}

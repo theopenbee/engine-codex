@@ -1,0 +1,11 @@
+warning: not json
+{"type":"thread.started","thread_id":"abc"}
+{broken json
+   {"type":"item.completed","item":{"type":"agent_message","text":"indented"}}   
+[1,2,3]
+"just a string"
+{"type":"item.completed","item":null}
+{"type":"item.completed","item":{"type":"agent_message","text":42}}
+
+{"type":"item.completed","item":{"type":"agent_message","text":"after noise"}}
+trailing text
