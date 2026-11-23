@@ -1,10 +1,9 @@
-import { execFile } from "node:child_process";
 import { createReadStream, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
 
-import { cliVersion, findCli, log, spawnCli } from "@theopenbee/engine-sdk";
+import { cliVersion, execCli, findCli, log, spawnCli } from "@theopenbee/engine-sdk";
 import type { Engine, EngineRequest, ModelInfo, RunParams, RunResult, TokenUsage } from "@theopenbee/engine-sdk";
 
 const MODELS_TIMEOUT_MS = 20_000;
@@ -386,7 +385,7 @@ export function parseModels(output: string): ModelInfo[] {
 
 function listModels(command: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    execFile(
+    execCli(
       command,
       ["debug", "models"],
       { timeout: MODELS_TIMEOUT_MS, killSignal: "SIGKILL", maxBuffer: MODELS_MAX_BUFFER, windowsHide: true },
