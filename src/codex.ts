@@ -6,6 +6,8 @@ import { createInterface } from "node:readline";
 import { cliVersion, execCli, findCli, log, spawnCli } from "@theopenbee/engine-sdk";
 import type { Engine, EngineRequest, ModelInfo, RunParams, RunResult, TokenUsage } from "@theopenbee/engine-sdk";
 
+import { buildTranscript } from "./transcript.js";
+
 const MODELS_TIMEOUT_MS = 20_000;
 const MODELS_MAX_BUFFER = 64 * 1024 * 1024;
 
@@ -471,5 +473,9 @@ export const engine: Engine = {
 
   async models(req) {
     return parseModels(await listModels(findCli(req.config, "codex")));
+  },
+
+  async transcript(req) {
+    return buildTranscript(req.params.log_path);
   },
 };

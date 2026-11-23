@@ -1,0 +1,35 @@
+2026-11-20T08:16:14.708956Z ERROR codex_models_manager::manager: failed to refresh available models: request timed out
+{"type":"thread.started","thread_id":"00000000-0000-4000-8000-000000000001"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I will look at the project layout first."}}
+{"type":"item.completed","item":{"id":"item_1","type":"agent_message","text":"Then I will read the notes."}}
+{"type":"item.completed","item":{"id":"item_2","type":"reasoning","text":"Listing the directory is the cheapest first step."}}
+{"type":"item.started","item":{"id":"item_3","type":"mcp_tool_call","server":"openbee","tool":"send_message","arguments":{"message_id":"msg-1","content":"Looking at the layout now."},"result":null,"error":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_3","type":"mcp_tool_call","server":"openbee","tool":"send_message","arguments":{"message_id":"msg-1","content":"Looking at the layout now."},"result":{"content":[{"type":"text","text":"{\"status\":\"sent\"}"}],"structured_content":null},"error":null,"status":"completed"}}
+{"type":"item.started","item":{"id":"item_4","type":"command_execution","command":"/bin/zsh -lc 'ls -la'","aggregated_output":"","exit_code":null,"status":"in_progress"}}
+{"type":"item.updated","item":{"id":"item_4","type":"command_execution","command":"/bin/zsh -lc 'ls -la'","aggregated_output":"partial","exit_code":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_4","type":"command_execution","command":"/bin/zsh -lc 'ls -la'","aggregated_output":"total 8\n-rw-r--r--  1 user  staff  12 Jan  1 00:00 notes.txt\n","exit_code":0,"status":"completed"}}
+{"type":"item.started","item":{"id":"item_5","type":"command_execution","command":"/bin/zsh -lc \"cat missing.txt\"","aggregated_output":"","exit_code":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_5","type":"command_execution","command":"/bin/zsh -lc \"cat missing.txt\"","aggregated_output":"cat: missing.txt: No such file or directory\n","exit_code":1,"status":"failed"}}
+{"type":"item.completed","item":{"id":"item_6","type":"command_execution","command":"bash -lc 'grep -q needle notes.txt'","aggregated_output":"","exit_code":1,"status":"completed"}}
+{"type":"item.completed","item":{"id":"item_7","type":"command_execution","command":"echo done","aggregated_output":"done\n","exit_code":0,"status":"completed"}}
+{"type":"item.started","item":{"id":"item_8","type":"mcp_tool_call","server":"openbee","tool":"execute","arguments":{"code":"return 1 + 1;"},"result":null,"error":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_8","type":"mcp_tool_call","server":"openbee","tool":"execute","arguments":{"code":"return 1 + 1;"},"result":{"content":[{"type":"text","text":"first block"},{"type":"text","text":"second block"}],"structured_content":null},"error":null,"status":"completed"}}
+{"type":"item.completed","item":{"id":"item_9","type":"mcp_tool_call","server":"openbee","tool":"execute","arguments":{"code":"return secret();"},"result":null,"error":{"message":"permission denied"},"status":"failed"}}
+{"type":"item.started","item":{"id":"item_10","type":"file_change","changes":[{"path":"/work/demo/a.txt","kind":"add"},{"path":"/work/demo/b.txt","kind":"update"}],"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_10","type":"file_change","changes":[{"path":"/work/demo/a.txt","kind":"add"},{"path":"/work/demo/b.txt","kind":"update"}],"status":"completed"}}
+{"type":"item.completed","item":{"id":"item_11","type":"file_change","changes":[{"path":"/work/demo/c.txt","kind":"delete"}],"status":"failed"}}
+{"type":"item.started","item":{"id":"item_12","type":"web_search","query":"","action":{"type":"other"}}}
+{"type":"item.completed","item":{"id":"item_12","type":"web_search","query":"codex exec json output","action":{"type":"search","query":"codex exec json output","queries":["codex exec json output"]}}}
+{"type":"item.completed","item":{"id":"item_13","type":"web_search","query":"","action":{"type":"open_page","url":"https://example.com/docs"}}}
+{"type":"item.started","item":{"id":"item_14","type":"collab_tool_call","tool":"spawn_agent","sender_thread_id":"00000000-0000-4000-8000-000000000001","receiver_thread_ids":[],"prompt":"Review the notes.","agents_states":{},"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_14","type":"collab_tool_call","tool":"spawn_agent","sender_thread_id":"00000000-0000-4000-8000-000000000001","receiver_thread_ids":["00000000-0000-4000-8000-000000000002"],"prompt":"Review the notes.","agents_states":{},"status":"completed"}}
+{"type":"item.started","item":{"id":"item_15","type":"todo_list","items":[{"text":"Review the notes","completed":false}]}}
+{"type":"item.updated","item":{"id":"item_15","type":"todo_list","items":[{"text":"Review the notes","completed":true}]}}
+{"type":"item.completed","item":{"id":"item_15","type":"todo_list","items":[{"text":"Review the notes","completed":true}]}}
+{"type":"item.completed","item":{"id":"item_16","type":"agent_message","text":"All done."}}
+{"type":"item.started","item":{"id":"item_17","type":"command_execution","command":"/bin/bash -lc \"sleep 60\"","aggregated_output":"","exit_code":null,"status":"in_progress"}}
+{"type":"error","message":"Reconnecting... 1/5 (network unreachable)"}
+{"type":"error","message":"model overloaded"}
+{"type":"turn.failed","error":{"message":"model overloaded"}}
+{"type":"item.completed","item":{"id":"item_18","type":"agent_message","text":"cut off

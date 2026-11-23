@@ -680,6 +680,32 @@ for (const runtime of runtimes) {
     assert.deepEqual(res, { error: { message: "codex not found on PATH" } });
   });
 
+  t("transcript turns the log into steps without needing codex", async () => {
+    const logPath = join(freshDir("logs"), "exec.log");
+    writeFileSync(
+      logPath,
+      [
+        "a warning on stderr",
+        JSON.stringify({ type: "item.completed", item: { id: "item_0", type: "agent_message", text: "hi" } }),
+        JSON.stringify({ type: "item.completed", item: { id: "item_1", type: "command_execution", command: "/bin/zsh -lc 'ls'", aggregated_output: "a\n", exit_code: 0, status: "completed" } }),
+      ].join("\n"),
+    );
+    const res = response(await runPlugin(runtime, baseRequest("transcript", { log_path: logPath }, { config: {} }), { PATH: freshDir("empty-path") }));
+    assert.deepEqual(res, {
+      result: {
+        steps: [
+          { type: "text", text: "hi" },
+          { type: "tool", kind: "command", name: "shell", summary: "ls", output: "a", status: "done" },
+        ],
+      },
+    });
+  });
+
+  t("transcript of a log that does not exist has no steps", async () => {
+    const res = response(await runPlugin(runtime, baseRequest("transcript", { log_path: join(scratch, "no-such.log") })));
+    assert.deepEqual(res, { result: { steps: [] } });
+  });
+
   const rollout = (model, input, output, cached) =>
     [
       { type: "turn_context", payload: { model } },
