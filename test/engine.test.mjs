@@ -33,6 +33,13 @@ const runtimes = [
 const THREAD = "019d7293-0a51-71e0-b634-02183839d7b2";
 const OTHER_THREAD = "019d7293-ffff-71e0-b634-000000000000";
 
+const CATALOG = [
+  { slug: "gpt-sol", display_name: "GPT-Sol", visibility: "list", priority: 1 },
+  { slug: "gpt-reserve", display_name: "GPT-Reserve", visibility: "hide", priority: 2 },
+  { slug: "gpt-luna", display_name: "GPT-Luna", visibility: "list", priority: 3 },
+  { slug: "codex-auto-review", display_name: "Codex Auto Review", visibility: "hide", priority: 4 },
+];
+
 const FAKE_CODEX = `#!${process.execPath}
 const fs = require("node:fs");
 const args = process.argv.slice(2);
@@ -40,6 +47,20 @@ const emit = (event) => fs.writeSync(1, JSON.stringify(event) + "\\n");
 const fail = (text) => fs.writeSync(2, text);
 if (args[0] === "--version") {
   fs.writeSync(1, (process.env.FAKE_CODEX_VERSION || "codex-cli 0.46.0") + "\\n");
+  process.exit(0);
+}
+if (args[0] === "debug" && args[1] === "models") {
+  if (process.env.FAKE_CODEX_RECORD) fs.appendFileSync(process.env.FAKE_CODEX_RECORD, JSON.stringify({ argv: args }) + "\\n");
+  const modelsMode = process.env.FAKE_CODEX_MODELS_MODE || "ok";
+  if (modelsMode === "fail") {
+    fail("loading the model catalog\\nError: failed to refresh available models\\n\\n");
+    process.exit(1);
+  }
+  if (modelsMode === "garbage") {
+    fs.writeSync(1, "not json");
+    process.exit(0);
+  }
+  fs.writeSync(1, JSON.stringify({ models: ${JSON.stringify(CATALOG)} }) + "\\n");
   process.exit(0);
 }
 const stdin = fs.readFileSync(0, "utf8");
@@ -458,6 +479,61 @@ for (const runtime of runtimes) {
     ]);
   });
 
+  t("run puts the model after the MCP config and before the extra args of a new session", async () => {
+    const record = join(freshDir("rec"), "calls.jsonl");
+    const req = baseRequest("run", runParams({ model: "gpt-luna", extra_args: ["-c", "model_reasoning_effort=high"], mcp: MCP }));
+    const raw = await runPlugin(runtime, req, { FAKE_CODEX_RECORD: record });
+    response(raw);
+    assert.deepEqual(recordedCall(record).argv, [
+      "exec",
+      "-",
+      ...FIXED_ARGS,
+      ...MCP_ARGS,
+      "--model",
+      "gpt-luna",
+      "-c",
+      "model_reasoning_effort=high",
+    ]);
+    assert.doesNotMatch(raw.stderr, /already set a model/);
+  });
+
+  t("run puts the model before the extra args of a resumed session", async () => {
+    const record = join(freshDir("rec"), "calls.jsonl");
+    const req = baseRequest("run", runParams({ resume: true, prompt: "follow up", model: "gpt-luna", extra_args: ["-c", "a=1"] }));
+    writeMapping(req, "mapped-thread-5");
+    response(await runPlugin(runtime, req, { FAKE_CODEX_RECORD: record }));
+    assert.deepEqual(recordedCall(record).argv, [
+      "exec",
+      "resume",
+      "mapped-thread-5",
+      ...FIXED_ARGS,
+      "follow up",
+      "--model",
+      "gpt-luna",
+      "-c",
+      "a=1",
+    ]);
+  });
+
+  t("run lets extra args that already set a model win and warns", async () => {
+    for (const extra of [["--model", "gpt-sol"], ["--model=gpt-sol"], ["-m", "gpt-sol"]]) {
+      const record = join(freshDir("rec"), "calls.jsonl");
+      const req = baseRequest("run", runParams({ model: "gpt-luna", extra_args: extra, mcp: MCP }));
+      const raw = await runPlugin(runtime, req, { FAKE_CODEX_RECORD: record });
+      response(raw);
+      assert.deepEqual(recordedCall(record).argv, ["exec", "-", ...FIXED_ARGS, ...MCP_ARGS, ...extra]);
+      assert.match(raw.stderr, /\[warn\] engine args already set a model, ignoring model "gpt-luna"/);
+    }
+  });
+
+  t("run passes no model flag when the model is empty or absent", async () => {
+    for (const overrides of [{ model: "" }, {}]) {
+      const record = join(freshDir("rec"), "calls.jsonl");
+      response(await runPlugin(runtime, baseRequest("run", runParams(overrides)), { FAKE_CODEX_RECORD: record }));
+      assert.deepEqual(recordedCall(record).argv, ["exec", "-", ...FIXED_ARGS]);
+    }
+  });
+
   t("run uses the MCP server name and key variable from the request", async () => {
     const record = join(freshDir("rec"), "calls.jsonl");
     const req = baseRequest("run", runParams({ mcp: { name: "bee-mcp", url: "http://h:1/mcp", api_key_env: "BEE_TOKEN" } }));
@@ -569,6 +645,40 @@ for (const runtime of runtimes) {
     },
     { skip: process.platform === "win32" },
   );
+
+  t("models lists the catalog models codex shows in its picker, in catalog order", async () => {
+    const record = join(freshDir("rec"), "calls.jsonl");
+    const res = response(await runPlugin(runtime, baseRequest("models", {}), { FAKE_CODEX_RECORD: record }));
+    assert.deepEqual(res, {
+      result: {
+        models: [
+          { id: "gpt-sol", name: "GPT-Sol" },
+          { id: "gpt-luna", name: "GPT-Luna" },
+        ],
+      },
+    });
+    assert.deepEqual(recordedCall(record).argv, ["debug", "models"]);
+  });
+
+  t("models uses codex from PATH when no path is configured", async () => {
+    const res = response(await runPlugin(runtime, baseRequest("models", {}, { config: {} }), { PATH: dirname(fakeCodex) }));
+    assert.equal(res.result.models.length, 2);
+  });
+
+  t("models reports the last stderr line when codex fails", async () => {
+    const res = response(await runPlugin(runtime, baseRequest("models", {}), { FAKE_CODEX_MODELS_MODE: "fail" }));
+    assert.deepEqual(res, { error: { message: "codex exited with code 1: Error: failed to refresh available models" } });
+  });
+
+  t("models reports output that is not JSON", async () => {
+    const res = response(await runPlugin(runtime, baseRequest("models", {}), { FAKE_CODEX_MODELS_MODE: "garbage" }));
+    assert.match(res.error.message, /^codex debug models returned invalid JSON/);
+  });
+
+  t("models fails when codex cannot be found", async () => {
+    const res = response(await runPlugin(runtime, baseRequest("models", {}, { config: {} }), { PATH: freshDir("empty-path") }));
+    assert.deepEqual(res, { error: { message: "codex not found on PATH" } });
+  });
 
   const rollout = (model, input, output, cached) =>
     [

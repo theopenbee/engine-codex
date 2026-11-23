@@ -46,6 +46,10 @@ Then enable the plugin, and pick `codex` as the default engine or per worker.
 
 The plugin checks the setting when it is enabled: it runs `codex --version` and shows the version, or the reason it failed (for example `codex not found on PATH`).
 
+## Model
+
+The worker's **Model** field is passed to Codex as `--model <model>`, for new and resumed conversations, before the extra args. The suggested models come from `codex debug models`: the models Codex shows in its own model picker, in Codex's order and with their display names. If the engine args already set a model with `--model` or `-m`, they win and the Model field is ignored. Without a model, Codex uses its own default.
+
 ## Sessions
 
 Codex names its conversations (threads) itself, so the plugin keeps a small mapping from each openbee session id to the Codex thread id. The mapping files live in `~/.openbee/.codex/sessions/`, one file per session, holding only the thread id. openbee never deletes this directory, so conversations survive uninstalling the plugin and conversations that were started before the plugin was installed keep working.
@@ -59,13 +63,13 @@ Token usage is read from Codex's own session files, `~/.codex/sessions/` (or `$C
 New conversation, with the prompt on standard input:
 
 ```
-codex exec - --json --dangerously-bypass-approvals-and-sandbox [mcp -c options] [extra args]
+codex exec - --json --dangerously-bypass-approvals-and-sandbox [mcp -c options] [--model <model>] [extra args]
 ```
 
 Later turns, with the prompt as the last argument:
 
 ```
-codex exec resume <thread id> --json --dangerously-bypass-approvals-and-sandbox <prompt> [mcp -c options] [extra args]
+codex exec resume <thread id> --json --dangerously-bypass-approvals-and-sandbox <prompt> [mcp -c options] [--model <model>] [extra args]
 ```
 
 - When openbee provides its MCP server, the plugin adds `-c mcp_servers.<name>.url="<url>"` and `-c mcp_servers.<name>.bearer_token_env_var="<key variable>"`. Codex reads the API key from its environment, so the key never appears on the command line.

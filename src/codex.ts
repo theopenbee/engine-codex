@@ -1,10 +1,14 @@
+import { execFile } from "node:child_process";
 import { createReadStream, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
 
 import { cliVersion, findCli, log, spawnCli } from "@theopenbee/engine-sdk";
-import type { Engine, EngineRequest, RunParams, RunResult, TokenUsage } from "@theopenbee/engine-sdk";
+import type { Engine, EngineRequest, ModelInfo, RunParams, RunResult, TokenUsage } from "@theopenbee/engine-sdk";
+
+const MODELS_TIMEOUT_MS = 20_000;
+const MODELS_MAX_BUFFER = 64 * 1024 * 1024;
 
 type JsonObject = Record<string, unknown>;
 type McpParams = NonNullable<RunParams["mcp"]>;
@@ -96,6 +100,15 @@ export function mcpArgs(mcp: McpParams | undefined): string[] {
   if (!mcp?.url) return [];
   const prefix = `mcp_servers.${mcp.name}.`;
   return ["-c", `${prefix}url=${goQuote(mcp.url)}`, "-c", `${prefix}bearer_token_env_var=${goQuote(mcp.api_key_env)}`];
+}
+
+export function modelArgs(model: string | undefined, extraArgs: string[]): string[] {
+  if (typeof model !== "string" || model === "") return [];
+  if (extraArgs.some((arg) => arg === "--model" || arg === "-m" || arg.startsWith("--model="))) {
+    log.warn(`engine args already set a model, ignoring model ${JSON.stringify(model)}`);
+    return [];
+  }
+  return ["--model", model];
 }
 
 export function buildArgs(threadId: string, resume: boolean, prompt: string, extraArgs: string[]): string[] {
@@ -352,6 +365,46 @@ export function failureText(code: number | null, signal: NodeJS.Signals | null, 
   return detail === "" ? base : `${base}: ${detail}`;
 }
 
+export function parseModels(output: string): ModelInfo[] {
+  let catalog: unknown;
+  try {
+    catalog = JSON.parse(output);
+  } catch (err) {
+    throw new Error(`codex debug models returned invalid JSON: ${errorMessage(err)}`);
+  }
+  if (!isObject(catalog) || !Array.isArray(catalog.models)) throw new Error("codex debug models returned no model list");
+  const models: ModelInfo[] = [];
+  for (const entry of catalog.models) {
+    if (!isObject(entry) || entry.visibility !== "list") continue;
+    const id = stringOrEmpty(entry.slug);
+    if (id === "") continue;
+    const name = stringOrEmpty(entry.display_name);
+    models.push(name === "" ? { id } : { id, name });
+  }
+  return models;
+}
+
+function listModels(command: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile(
+      command,
+      ["debug", "models"],
+      { timeout: MODELS_TIMEOUT_MS, killSignal: "SIGKILL", maxBuffer: MODELS_MAX_BUFFER, windowsHide: true },
+      (err, stdout, stderr) => {
+        if (!err) {
+          resolve(String(stdout));
+          return;
+        }
+        const { code, killed, signal } = err as { code?: unknown; killed?: boolean; signal?: NodeJS.Signals | null };
+        if (typeof code === "number") reject(new Error(failureText(code, null, String(stderr))));
+        else if (killed) reject(new Error(`codex debug models timed out after ${MODELS_TIMEOUT_MS / 1000}s`));
+        else if (code === null) reject(new Error(failureText(null, signal ?? null, String(stderr))));
+        else reject(new Error(`codex debug models failed: ${errorMessage(err)}`));
+      },
+    );
+  });
+}
+
 function resolveThread(store: SessionStore, sessionId: string, resume: boolean): { threadId: string; resume: boolean } {
   if (!resume) return { threadId: "", resume: false };
   const threadId = store.get(sessionId);
@@ -373,7 +426,12 @@ export const engine: Engine = {
     const command = findCli(req.config, "codex");
     const store = openSessionStore(join(req.state_dir, "sessions"));
     const thread = resolveThread(store, params.session_id, params.resume);
-    const args = buildArgs(thread.threadId, thread.resume, params.prompt, [...mcpArgs(params.mcp), ...(params.extra_args ?? [])]);
+    const extraArgs = params.extra_args ?? [];
+    const args = buildArgs(thread.threadId, thread.resume, params.prompt, [
+      ...mcpArgs(params.mcp),
+      ...modelArgs(params.model, extraArgs),
+      ...extraArgs,
+    ]);
 
     let awaitingThread = !thread.resume;
     let outcome;
@@ -410,5 +468,9 @@ export const engine: Engine = {
 
   async usage(req) {
     return collectUsage(new SessionStore(join(req.state_dir, "sessions")), codexBaseDir(), req.params.session_ids ?? []);
+  },
+
+  async models(req) {
+    return parseModels(await listModels(findCli(req.config, "codex")));
   },
 };

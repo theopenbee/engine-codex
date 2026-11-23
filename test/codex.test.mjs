@@ -15,7 +15,9 @@ import {
   findCodexSessionFile,
   goQuote,
   mcpArgs,
+  modelArgs,
   openSessionStore,
+  parseModels,
   threadIdFromLine,
 } from "../dist/codex.js";
 
@@ -80,6 +82,53 @@ test("buildArgs appends extra args after the fixed flags of a new session", () =
 
 test("buildArgs appends extra args after the prompt of a resume", () => {
   assert.deepEqual(buildArgs("t1", true, "hi", ["-c", "a=1"]), ["exec", "resume", "t1", ...FIXED, "hi", "-c", "a=1"]);
+});
+
+test("modelArgs passes a model as --model", () => {
+  assert.deepEqual(modelArgs("gpt-5", []), ["--model", "gpt-5"]);
+  assert.deepEqual(modelArgs("gpt-5", ["-c", "model_reasoning_effort=high"]), ["--model", "gpt-5"]);
+});
+
+test("modelArgs is empty without a model", () => {
+  assert.deepEqual(modelArgs(undefined, []), []);
+  assert.deepEqual(modelArgs("", []), []);
+});
+
+test("modelArgs leaves the model to extra args that already set one", () => {
+  assert.deepEqual(modelArgs("gpt-5", ["--model", "gpt-luna"]), []);
+  assert.deepEqual(modelArgs("gpt-5", ["--model=gpt-luna"]), []);
+  assert.deepEqual(modelArgs("gpt-5", ["-m", "gpt-luna"]), []);
+});
+
+test("parseModels keeps the listed models in catalog order", () => {
+  const output = JSON.stringify({
+    models: [
+      { slug: "b-model", display_name: "B Model", visibility: "list" },
+      { slug: "hidden", display_name: "Hidden", visibility: "hide" },
+      { slug: "a-model", display_name: "A Model", visibility: "list" },
+    ],
+  });
+  assert.deepEqual(parseModels(output), [
+    { id: "b-model", name: "B Model" },
+    { id: "a-model", name: "A Model" },
+  ]);
+});
+
+test("parseModels leaves out the name when there is none and skips entries without a slug", () => {
+  const output = JSON.stringify({
+    models: [{ slug: "plain", visibility: "list" }, { display_name: "No Slug", visibility: "list" }, "junk", { slug: "no-visibility" }],
+  });
+  assert.deepEqual(parseModels(output), [{ id: "plain" }]);
+});
+
+test("parseModels accepts an empty catalog", () => {
+  assert.deepEqual(parseModels('{"models":[]}'), []);
+});
+
+test("parseModels rejects output that is not a model catalog", () => {
+  assert.throws(() => parseModels("not json"), /^Error: codex debug models returned invalid JSON/);
+  assert.throws(() => parseModels('{"items":[]}'), { message: "codex debug models returned no model list" });
+  assert.throws(() => parseModels("[]"), { message: "codex debug models returned no model list" });
 });
 
 test("mcpArgs is empty without an MCP address", () => {
