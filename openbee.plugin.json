@@ -5,6 +5,7 @@
   "name": { "en": "Codex", "zh": "Codex" },
   "description": { "en": "Runs tasks with OpenAI Codex", "zh": "用 OpenAI Codex 执行任务" },
   "command": ["node", "dist/index.js"],
+  "icon": "icon.svg",
   "config": [
     {
       "key": "path",
